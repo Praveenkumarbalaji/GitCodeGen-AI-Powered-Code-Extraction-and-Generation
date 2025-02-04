@@ -1,135 +1,81 @@
-GitCodeGen: AI-Powered Code Generation Model Using LLMs
-Overview
-GitCodeGen is an AI-powered code generation model that utilizes Large Language Models (LLMs) to generate high-quality, structured, and syntactically correct code. This project extracts real-world code snippets from GitHub repositories, preprocesses them, and fine-tunes a pre-trained model to improve its ability to generate functional code snippets.
 
-Features
-✅ Automated Code Extraction – Scrapes GitHub repositories for Python code snippets using the GitHub API.
-✅ LLM Fine-Tuning – Customizes a pre-trained language model (Salesforce CodeGen, GPT-4, etc.) for enhanced code generation.
-✅ Context-Aware Code Completion – Generates intelligent, functional, and structured code.
-✅ Multi-Language Support – Can be extended to support various programming languages.
-✅ Developer Assistance – Automates repetitive coding tasks, improving developer productivity.
+<body>
+  <h1>GitCodeGen: AI-Powered Code Extraction and Generation</h1>
+  
+  <h2>Overview</h2>
+  <p>
+    This notebook demonstrates an AI-powered workflow that extracts Python functions from code files in a GitHub repository and generates new code using a fine-tuned language model. The notebook performs the following tasks:
+  </p>
+  <ul>
+    <li>Installs the required packages, including Transformers, Datasets, Accelerate, and PyGithub.</li>
+    <li>Fetches Python files from a GitHub repository (e.g., <code>openai/gym</code>) and extracts function definitions using regular expressions.</li>
+    <li>Creates a dataset from the extracted code and saves it to disk.</li>
+    <li>Loads a pre-trained model (<code>Salesforce/codegen-350M-mono</code>) and its tokenizer for code generation.</li>
+    <li>Defines a function to generate code completions given a code prompt.</li>
+    <li>Tests code generation with sample prompts such as <code>def merge_sort(arr):</code> and <code>def factorial(n):</code>.</li>
+  </ul>
 
-Installation
-To get started, install the necessary dependencies:
+  <h2>Installation &amp; Dependencies</h2>
+  <p>
+    To run this notebook, ensure you have the following dependencies installed:
+  </p>
+  <ul>
+    <li><code>transformers</code></li>
+    <li><code>datasets</code></li>
+    <li><code>accelerate</code></li>
+    <li><code>PyGithub</code></li>
+    <li>Python standard libraries: <code>re</code>, etc.</li>
+  </ul>
+  <p>
+    You can install these packages using pip. For example:
+  </p>
+  <pre><code>!pip install transformers datasets accelerate
+!pip install PyGithub</code></pre>
 
+  <h2>Usage</h2>
+  <ol>
+    <li>
+      <strong>Open in Colab:</strong> Click the Colab badge in the first cell of the notebook to open it in Google Colab:
+      <br>
+      <a href="https://colab.research.google.com/github/Praveenkumarbalaji/GitCodeGen-AI-Powered-Code-Extraction-and-Generation/blob/main/GitCodeGen_AI_Powered_Code_Extraction_and_Generation.ipynb" target="_blank">
+        <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+      </a>
+    </li>
+    <li>
+      <strong>Run All Cells:</strong> Execute the notebook cells sequentially. The notebook will:
+      <ul>
+        <li>Install and import necessary packages.</li>
+        <li>Extract functions from Python files fetched from GitHub.</li>
+        <li>Create a code generation dataset and save it to disk.</li>
+        <li>Load the pre-trained model and tokenizer from Hugging Face.</li>
+        <li>Generate code completions for provided prompts.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Test Code Generation:</strong> Modify the prompt strings as needed and observe the generated code output.
+    </li>
+  </ol>
 
-pip install transformers datasets accelerate PyGithub
-Usage
-1. Collect Code Snippets from GitHub
-Use the GitHub API to fetch Python files and extract function definitions:
+  <h2>Notebook Structure</h2>
+  <p>
+    The notebook is organized into several sections:
+  </p>
+  <ul>
+    <li><strong>Colab Badge:</strong> A clickable badge that opens the notebook in Google Colab.</li>
+    <li><strong>Dependency Installation:</strong> Code cells to install required packages and libraries.</li>
+    <li><strong>GitHub Code Extraction:</strong> A section that uses PyGithub to fetch Python files from a repository and extracts function definitions using regular expressions.</li>
+    <li><strong>Dataset Creation:</strong> Code to build a code generation dataset from the extracted functions and save it locally.</li>
+    <li><strong>Model Setup &amp; Code Generation:</strong> Loading the <code>Salesforce/codegen-350M-mono</code> model and tokenizer, defining a code generation function, and testing the model with sample prompts.</li>
+  </ul>
 
-python
+  <h2>Acknowledgements</h2>
+  <p>
+    This project utilizes open-source libraries including Transformers, Datasets, Accelerate, and PyGithub. Thanks to the respective communities for making these tools available.
+  </p>
 
-from github import Github
-import re
-from datasets import Dataset
-
-g = Github("Your_GitHub_Token")
-repo = g.get_repo("openai/gym")
-
-def extract_functions_from_code(code):
-    pattern = re.compile(r"def\s+(\w+)\s*\(.*\):")
-    return pattern.findall(code)
-
-python_files = []
-contents = repo.get_contents("")
-while contents:
-    file_content = contents.pop(0)
-    if file_content.type == "dir":
-        contents.extend(repo.get_contents(file_content.path))
-    elif file_content.path.endswith(".py"):
-        python_files.append(file_content)
-
-data = {"code": [], "function_name": []}
-for file in python_files:
-    code = file.decoded_content.decode("utf-8")
-    functions = extract_functions_from_code(code)
-    for function in functions:
-        data["code"].append(code)
-        data["function_name"].append(function)
-
-dataset = Dataset.from_dict(data)
-dataset.save_to_disk("code_generation_dataset")
-print("Dataset created and saved to disk.")
-2. Fine-Tune the Code Generation Model
-Load and fine-tune a pre-trained model using the collected dataset:
-
-
-from datasets import load_from_disk
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
-
-tokenizer = AutoTokenizer.from_pretrained("Salesforce/codegen-350M-mono")
-model = AutoModelForCausalLM.from_pretrained("Salesforce/codegen-350M-mono")
-
-tokenizer.pad_token = tokenizer.eos_token
-dataset = load_from_disk("code_generation_dataset")
-dataset = dataset.train_test_split(test_size=0.1)
-
-def preprocess_function(examples):
-    return tokenizer(examples['code'], truncation=True, padding='max_length')
-
-tokenized_datasets = dataset.map(preprocess_function, batched=True)
-
-training_args = TrainingArguments(
-    output_dir="./results",
-    per_device_train_batch_size=2,
-    num_train_epochs=1,
-    save_steps=10_000,
-    save_total_limit=2,
-)
-
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized_datasets['train'],
-    eval_dataset=tokenized_datasets['test']
-)
-
-trainer.train()
-3. Generate Code Using the Fine-Tuned Model
-Once trained, use the model to generate new code snippets:
-
-
-def generate_code(prompt, max_length=100):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(inputs['input_ids'], max_length=max_length)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-prompt = "def fibonacci(n):"
-generated_code = generate_code(prompt)
-
-print("Generated Code:")
-print(generated_code)
-Example Output
-
-Generated Code:
-def fibonacci(n):
-    if n <= 0:
-        return 0
-    elif n == 1:
-        return 1
-    else:
-        return fibonacci(n-1) + fibonacci(n-2)
-Project Structure
-bash
-Copy
-Edit
-📂 GitCodeGen
-│── 📁 data                # Collected dataset
-│── 📁 models              # Trained models
-│── 📁 scripts             # Python scripts for training & inference
-│── 📄 README.md           # Project documentation
-│── 📄 requirements.txt    # Dependencies
-│── 📄 train.py            # Model training script
-│── 📄 generate.py         # Code generation script
-Future Enhancements
-🚀 Support for multiple programming languages (Java, C++, JavaScript).
-🚀 Deploy as an API for integration with development environments.
-🚀 Implement reinforcement learning for better code optimization.
-
-Contributing
-Pull requests are welcome! Feel free to open an issue for any suggestions or improvements.
-
-License
-This project is licensed under the Apache 2.0 License.
-
+  <h2>License</h2>
+  <p>
+    This project is licensed under the MIT License.
+  </p>
+</body>
+</html>
